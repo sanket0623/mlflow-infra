@@ -23,11 +23,13 @@ class MlflowStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True)
 
+        # Create a Secrets Manager secret for the RDS database credentials
         db_secret = secrets.Secret(self, "DbSecret",
             generate_secret_string=secrets.SecretStringGenerator(
                 secret_string_template='{"username":"mlflow"}',
                 generate_string_key='password', exclude_punctuation=True))
 
+        # Create an RDS PostgreSQL database instance with the specified configuration
         db = rds.DatabaseInstance(self, "Postgres",
             engine=rds.DatabaseInstanceEngine.postgres(
                 version=rds.PostgresEngineVersion.VER_16_3),
@@ -39,8 +41,10 @@ class MlflowStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             deletion_protection=False)
 
+        # Create an ECR repository for the MLflow server Docker image
         repo = ecr.Repository(self, "MlflowRepo", repository_name="mlflow-server")
 
+        # Create an ECS cluster and a Fargate service to run the MLflow server, with an application load balancer and auto-scaling based on CPU utilization
         cluster = ecs.Cluster(self, "Cluster", vpc=vpc)
 
         service = ecs_patterns.ApplicationLoadBalancedFargateService(self, "Service",
@@ -64,12 +68,18 @@ class MlflowStack(Stack):
                 }
             ))
 
+        # Grant necessary permissions for the ECS task to access the S3 bucket, ECR repository, and RDS database
         bucket.grant_read_write(service.task_definition.task_role)
         repo.grant_pull(service.task_definition.execution_role)
         db.connections.allow_default_port_from(service.service)
 
+        # Set up auto-scaling for the ECS service based on CPU utilization
         scalable = service.service.auto_scale_task_count(max_capacity=2)
-        scalable.scale_on_cpu_utilization("CpuScaling", target_utilization_percent=70, cooldown=Duration.seconds(60))
-
+        scalable.scale_on_cpu_utilization("CpuScaling",
+            target_utilization_percent=70,
+            scale_in_cooldown=Duration.seconds(60),
+            scale_out_cooldown=Duration.seconds(60))
+        
+        # Output the ALB URL and ECR repository URI for easy access after deployment
         CfnOutput(self, "AlbUrl", value=f"http://{service.load_balancer.load_balancer_dns_name}")
         CfnOutput(self, "EcrRepo", value=repo.repository_uri)
