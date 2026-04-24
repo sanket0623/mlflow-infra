@@ -44,13 +44,13 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
-        run: docker build -t mlflow-server:${{ github.sha }} ./container
+        run: docker build -t mlflow-server:latest ./container
 
-      - name: Tag Docker Image
-        run: docker tag mlflow-server:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/mlflow-server:${{ github.sha }}
+      - name: Tag latest
+        run: docker tag mlflow-server:latest ${{ steps.login-ecr.outputs.registry }}/mlflow-server:latest
 
-      - name: Push Docker Image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/mlflow-server:${{ github.sha }}
+      - name: Push latest
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/mlflow-server:latest
 
       - name: Deploy Infrastructure
         run: cdk deploy --require-approval never

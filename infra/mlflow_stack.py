@@ -67,6 +67,8 @@ class MlflowStack(Stack):
                     "DB_PASSWORD": ecs.Secret.from_secrets_manager(db_secret, "password"),
                 }
             ))
+        
+        service.target_group.configure_health_check(path="/", healthy_http_codes="200,302")
 
         # Grant necessary permissions for the ECS task to access the S3 bucket, ECR repository, and RDS database
         bucket.grant_read_write(service.task_definition.task_role)
