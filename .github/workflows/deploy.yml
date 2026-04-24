@@ -1,28 +1,56 @@
 name: Deploy MLflow
+
 on:
   push:
     branches: [ main ]
+
 permissions:
   id-token: write
   contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
-      - run: npm install -g aws-cdk
-      - uses: aws-actions/configure-aws-credentials@v4
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::579035388785:role/mlflow-github-role
           aws-region: ap-south-1
-      - id: login-ecr
+
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
+
+      - name: CDK Bootstrap (One-time safe)
+        run: cdk bootstrap aws://579035388785/ap-south-1
+
+      - name: Login to ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - run: |
-          docker build -t mlflow-server:latest ./container
-          docker tag mlflow-server:latest ${{ steps.login-ecr.outputs.registry }}/mlflow-server:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/mlflow-server:latest
-      - run: cdk deploy --require-approval never
+
+      - name: Build Docker Image
+        run: docker build -t mlflow-server:${{ github.sha }} ./container
+
+      - name: Tag Docker Image
+        run: docker tag mlflow-server:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/mlflow-server:${{ github.sha }}
+
+      - name: Push Docker Image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/mlflow-server:${{ github.sha }}
+
+      - name: Deploy Infrastructure
+        run: cdk deploy --require-approval never
