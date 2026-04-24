@@ -2,7 +2,15 @@
 import aws_cdk as cdk
 from mlflow_stack import MlflowStack
 
-# This is the entry point for the CDK application. It initializes the app and defines the stack(s) to be deployed.
 app = cdk.App()
-MlflowStack(app, "MlflowPlatformStack")
+
+MlflowStack(
+    app,
+    "MlflowPlatformStack",
+    env=cdk.Environment(
+        account="579035388785",
+        region="ap-south-1"
+    )
+)
+
 app.synth()

@@ -36,8 +36,8 @@ jobs:
       - name: Verify AWS Identity
         run: aws sts get-caller-identity
 
-      - name: CDK Bootstrap (One-time safe)
-        run: cdk bootstrap aws://579035388785/ap-south-1
+      - name: Force Bootstrap CDK Environment
+        run: cdk bootstrap --force aws://579035388785/ap-south-1
 
       - name: Login to ECR
         id: login-ecr

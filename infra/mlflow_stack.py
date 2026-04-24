@@ -32,7 +32,7 @@ class MlflowStack(Stack):
         # Create an RDS PostgreSQL database instance with the specified configuration
         db = rds.DatabaseInstance(self, "Postgres",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_16_3),
+                version=rds.PostgresEngineVersion.VER_15),
             vpc=vpc,
             credentials=rds.Credentials.from_secret(db_secret),
             database_name="mlflow",
@@ -42,7 +42,7 @@ class MlflowStack(Stack):
             deletion_protection=False)
 
         # Create an ECR repository for the MLflow server Docker image
-        repo = ecr.Repository(self, "MlflowRepo", repository_name="mlflow-server")
+        repo = ecr.Repository.from_repository_name(self, "MlflowRepo", "mlflow-server")
 
         # Create an ECS cluster and a Fargate service to run the MLflow server, with an application load balancer and auto-scaling based on CPU utilization
         cluster = ecs.Cluster(self, "Cluster", vpc=vpc)
